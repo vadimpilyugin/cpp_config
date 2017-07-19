@@ -1,0 +1,13 @@
+	[SECTION1]
+
+param1 = "value1"
+param2 = "value2"
+
+	[SECTION_2]
+
+param1 = "value_3"
+param2 = "value 4"
+
+[SECTION1]
+param3 = "value3"
+param4 = "value4"
