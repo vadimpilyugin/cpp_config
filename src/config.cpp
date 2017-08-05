@@ -1,6 +1,10 @@
 #include "config.h"
+#include <sys/stat.h>
 
+#define CONFIG_DEBUG 0
 std::string Config::fn;
+int Config::counter = 0;
+time_t Config::modif_date = 0;
 
 enum class States {
 	SECTION_EXPECT,
@@ -12,10 +16,10 @@ enum class States {
 	PARAM_VALUE,
 	SUCCESS,
 };
-
-Config::Config (std::ifstream &config_file) {
+void Config::load_file (std::ifstream &config_file) {
 	char c;
 	std::string section;
+	config.clear ();
 	// Hash params;
 	std::string param_name;
 	std::string param_value;
@@ -25,7 +29,10 @@ Config::Config (std::ifstream &config_file) {
 		c = config_file.get ();
 		switch (state) {
 			case States::SECTION_EXPECT:
+
+				#if CONFIG_DEBUG
 				Printer::debug (to_string (c), "SECTION_EXPECT");
+				#endif
 				if (isspace (c))
 					;
 				else if (c == OPENING_BRACE) {
@@ -41,7 +48,9 @@ Config::Config (std::ifstream &config_file) {
 				}
 				break;
 			case States::SECTION_NAME:
+				#if CONFIG_DEBUG
 				Printer::debug (to_string (c), "SECTION_NAME");
+				#endif
 				if (isalpha (c) || isdigit (c) || c == UNDERSCORE) {
 					section.push_back (c);
 					
@@ -49,7 +58,9 @@ Config::Config (std::ifstream &config_file) {
 				else if (c == CLOSING_BRACE) {
 					state = States::PARAMS_EXPECT;
 					// params = config[section];
+					#if CONFIG_DEBUG
 					Printer::debug (section, "New section");
+					#endif
 				}
 				else {
 					Printer::error ("Unexpected character", "SECTION_NAME", {{"Character", to_string (c)}});
@@ -57,7 +68,9 @@ Config::Config (std::ifstream &config_file) {
 				}
 				break;
 			case States::PARAMS_EXPECT:
+				#if CONFIG_DEBUG
 				Printer::debug (to_string (c), "PARAMS_EXPECT");
+				#endif
 				if (isspace (c))
 					;
 				else if (c == OPENING_BRACE) {
@@ -78,7 +91,9 @@ Config::Config (std::ifstream &config_file) {
 				}
 				break;
 			case States::PARAM_NAME:
+				#if CONFIG_DEBUG
 				Printer::debug (to_string (c), "PARAM_NAME");
+				#endif
 				if (isalpha (c) || isdigit (c) || c == UNDERSCORE) {
 					param_name.push_back (c);
 				}
@@ -94,7 +109,9 @@ Config::Config (std::ifstream &config_file) {
 				}
 				break;
 			case States::DELIM_EXPECT:
+				#if CONFIG_DEBUG
 				Printer::debug (to_string (c), "DELIM_EXPECT");
+				#endif
 				if (isspace (c))
 					;
 				else if (c == DELIM)
@@ -105,7 +122,9 @@ Config::Config (std::ifstream &config_file) {
 				}
 				break;
 			case States::PARAM_VALUE_EXPECT:
+				#if CONFIG_DEBUG
 				Printer::debug (to_string (c), "PARAM_VALUE_EXPECT");
+				#endif
 				if (isspace (c))
 					;
 				else if (c == QUOTES) {
@@ -118,11 +137,15 @@ Config::Config (std::ifstream &config_file) {
 				}
 				break;
 			case States::PARAM_VALUE:
+				#if CONFIG_DEBUG
 				Printer::debug (to_string (c), "PARAM_VALUE");
+				#endif
 				if (c == QUOTES) {
 					state = States::PARAMS_EXPECT;
 					config[section][param_name] = param_value;
+					#if CONFIG_DEBUG
 					Printer::debug ("", section, config[section]);
+					#endif
 				}
 				else {
 					param_value.push_back (c);
@@ -130,18 +153,44 @@ Config::Config (std::ifstream &config_file) {
 				break;
 		}
 	}
+
+}
+
+Config::Config (std::ifstream &config_file) {
+	load_file (config_file);
 }
 
 Config &Config::load (const std::string &filename) {
-	std::ifstream config_file (filename);
-	if (!config_file.is_open ()) {
-		Printer::error (filename, "Could not open configuration file");
-		throw std::string ("Could not open configuration file");
+	// create structure for stat
+	struct stat _file_attrib;
+	// call stat on file
+	if(stat(filename.c_str(), &_file_attrib) == -1)
+		throw filename;
+	// get modification date
+	time_t curr_modif_date = _file_attrib.st_mtime;
+	// input file stream
+	std::ifstream config_file;
+	if (counter == 0) {
+		// load file for the first time
+		config_file.open (filename);
+		if (!config_file.is_open ()) {
+			Printer::error (filename, "Could not open configuration file");
+			throw std::string ("Could not open configuration file");
+		}
+		#if CONFIG_DEBUG
+		Printer::debug (filename, "Found config file");
+		#endif
+		if (fn.empty ())
+			fn = filename;
+		counter = 1;
+		modif_date = curr_modif_date;
 	}
-	Printer::debug (filename, "Found config file");
-	if (fn.empty ())
-		fn = filename;
 	static Config cfg (config_file);
+	if (curr_modif_date > modif_date) {
+		config_file.open (filename);
+		modif_date = curr_modif_date;
+		cfg.load_file (config_file);
+	}
 	return cfg;
 }
 
@@ -149,8 +198,15 @@ Hash & Config::operator[] (const std::string &section) {
 	return config.at(section);
 }
 
+Hash &Config::section (std::string section_name) {
+	return Config::get()[section_name];
+}
+#if CONFIG_DEBUG
 void Config::out () const {
 	for (const auto &section: config) {
+		#if CONFIG_DEBUG
 		Printer::debug ("", std::string ("[") + section.first + std::string ("]"), section.second);
+		#endif
 	}
 }
+#endif

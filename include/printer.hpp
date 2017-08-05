@@ -1,12 +1,12 @@
 #pragma once
-#define DEBUG 0
+#define DEBUG 1
 
 #include <string>
-#include <map>
+#include <unordered_map>
 #include <iostream>
 #include <exception>
 
-using Hash = std::map<std::string,std::string>;
+using Hash = std::unordered_map<std::string,std::string>;
 
 namespace Printer {
 

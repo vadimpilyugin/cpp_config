@@ -2,11 +2,15 @@
 
 #include <string>
 #include <fstream>
+#include <unordered_map>
+
 #include "printer.hpp"
 
 class Config {
-	std::map <std::string, Hash> config;
+	std::unordered_map <std::string, Hash> config;
 	static std::string fn;
+	static int counter;
+	static time_t modif_date;
 
 	static const char OPENING_BRACE = '[';
 	static const char CLOSING_BRACE = ']';
@@ -21,6 +25,7 @@ class Config {
 	Config (std::ifstream &config_file);
 	Config (Config &) = delete;
 	Config (Config &&) = delete;
+	#if DEBUG
 	std::string to_string (char c) { 
 		if (isspace (c)) {
 			switch (c) {
@@ -33,9 +38,14 @@ class Config {
 			return std::string ("EOF");
 		return std::string(1, c);
 	}
+	#endif
+	void load_file (std::ifstream &config_file);
 public:
 	Hash &operator[] (const std::string &section);
 	static Config &load (const std::string &filename);
 	static Config &get () { return load (fn); }
+	static Hash &section (std::string);
+	#if DEBUG
 	void out () const;
+	#endif
 };
