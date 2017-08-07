@@ -2,9 +2,7 @@
 #include <sys/stat.h>
 
 #define CONFIG_DEBUG 0
-std::string Config::fn;
 int Config::counter = 0;
-time_t Config::modif_date = 0;
 
 enum class States {
 	SECTION_EXPECT,
@@ -161,13 +159,6 @@ Config::Config (std::ifstream &config_file) {
 }
 
 Config &Config::load (const std::string &filename) {
-	// create structure for stat
-	struct stat _file_attrib;
-	// call stat on file
-	if(stat(filename.c_str(), &_file_attrib) == -1)
-		throw filename;
-	// get modification date
-	time_t curr_modif_date = _file_attrib.st_mtime;
 	// input file stream
 	std::ifstream config_file;
 	if (counter == 0) {
@@ -180,17 +171,9 @@ Config &Config::load (const std::string &filename) {
 		#if CONFIG_DEBUG
 		Printer::debug (filename, "Found config file");
 		#endif
-		if (fn.empty ())
-			fn = filename;
 		counter = 1;
-		modif_date = curr_modif_date;
 	}
 	static Config cfg (config_file);
-	if (curr_modif_date > modif_date) {
-		config_file.open (filename);
-		modif_date = curr_modif_date;
-		cfg.load_file (config_file);
-	}
 	return cfg;
 }
 

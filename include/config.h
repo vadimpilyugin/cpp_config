@@ -8,9 +8,7 @@
 
 class Config {
 	std::unordered_map <std::string, Hash> config;
-	static std::string fn;
 	static int counter;
-	static time_t modif_date;
 
 	static const char OPENING_BRACE = '[';
 	static const char CLOSING_BRACE = ']';
@@ -43,7 +41,7 @@ class Config {
 public:
 	Hash &operator[] (const std::string &section);
 	static Config &load (const std::string &filename);
-	static Config &get () { return load (fn); }
+	static Config &get () { return load (""); }
 	static Hash &section (std::string);
 	#if DEBUG
 	void out () const;

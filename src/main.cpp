@@ -63,6 +63,6 @@ int main () {
 	Printer::debug ("Hello, world!");
 	test_existing ();
 	test_non_existing ();
-	test_modification ();
+//	test_modification ();
 	return 0;
 }
